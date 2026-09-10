@@ -1,0 +1,234 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Skill Swap Backend API",
+    "version": "1.0.0",
+    "description": "Production-ready RESTful backend API for Skill Swap - campus peer-learning platform."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register new student user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password", "department", "year"],
+                "properties": {
+                  "name": { "type": "string", "example": "Student A" },
+                  "email": { "type": "string", "example": "studenta@campus.edu" },
+                  "password": { "type": "string", "example": "Password123!" },
+                  "department": { "type": "string", "example": "Computer Science" },
+                  "year": { "type": "string", "example": "3rd Year" },
+                  "campus": { "type": "string", "example": "Main Campus" },
+                  "bio": { "type": "string", "example": "Passionate Python coder and learner" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User registered successfully" },
+          "400": { "description": "Validation error or invalid email domain" },
+          "409": { "description": "Email already exists" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "User login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "example": "studenta@campus.edu" },
+                  "password": { "type": "string", "example": "Password123!" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful, returns JWT token" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get authenticated user profile",
+        "responses": {
+          "200": { "description": "Current user profile" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": ["User Profile"],
+        "summary": "Get current user profile",
+        "responses": { "200": { "description": "Success" } }
+      },
+      "put": {
+        "tags": ["User Profile"],
+        "summary": "Update profile info",
+        "responses": { "200": { "description": "Profile updated" } }
+      }
+    },
+    "/api/users/me/skills/teach": {
+      "post": {
+        "tags": ["User Skills"],
+        "summary": "Add or update skill to teach",
+        "responses": { "200": { "description": "Teach skill added" } }
+      }
+    },
+    "/api/users/me/skills/learn": {
+      "post": {
+        "tags": ["User Skills"],
+        "summary": "Add or update skill to learn",
+        "responses": { "200": { "description": "Learn skill added" } }
+      }
+    },
+    "/api/availability": {
+      "post": {
+        "tags": ["Availability"],
+        "summary": "Create weekly availability slot",
+        "responses": { "201": { "description": "Slot created" } }
+      }
+    },
+    "/api/availability/me": {
+      "get": {
+        "tags": ["Availability"],
+        "summary": "Get user availability slots",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/api/matches": {
+      "get": {
+        "tags": ["Matching"],
+        "summary": "Find and rank compatible peer matches",
+        "parameters": [
+          { "name": "minScore", "in": "query", "schema": { "type": "integer" } },
+          { "name": "skill", "in": "query", "schema": { "type": "string" } },
+          { "name": "department", "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Ranked matches list with detailed score breakdown" } }
+      }
+    },
+    "/api/requests": {
+      "post": {
+        "tags": ["Swap Requests"],
+        "summary": "Send a skill swap request",
+        "responses": { "201": { "description": "Request sent" } }
+      }
+    },
+    "/api/requests/sent": {
+      "get": {
+        "tags": ["Swap Requests"],
+        "summary": "Get sent requests",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/api/requests/received": {
+      "get": {
+        "tags": ["Swap Requests"],
+        "summary": "Get received requests",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/api/sessions": {
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Create learning session",
+        "responses": { "201": { "description": "Session created" } }
+      }
+    },
+    "/api/sessions/me": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Get my sessions",
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/api/sessions/{id}/complete": {
+      "patch": {
+        "tags": ["Sessions"],
+        "summary": "Complete a session (awards Skill Credits & evaluates badges)",
+        "responses": { "200": { "description": "Session completed" } }
+      }
+    },
+    "/api/ratings": {
+      "post": {
+        "tags": ["Ratings"],
+        "summary": "Rate a completed session participant",
+        "responses": { "201": { "description": "Rating submitted" } }
+      }
+    },
+    "/api/credits/balance": {
+      "get": {
+        "tags": ["Credits"],
+        "summary": "Get credit balance",
+        "responses": { "200": { "description": "Balance" } }
+      }
+    },
+    "/api/credits/history": {
+      "get": {
+        "tags": ["Credits"],
+        "summary": "Get credit history",
+        "responses": { "200": { "description": "History" } }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get full aggregated user dashboard payload",
+        "responses": { "200": { "description": "Dashboard summary" } }
+      }
+    },
+    "/api/analytics/trending-skills": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get campus trending skills & demand analytics",
+        "responses": { "200": { "description": "Trending skills analytics" } }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "Global student and skill search",
+        "responses": { "200": { "description": "Search results" } }
+      }
+    }
+  }
+}

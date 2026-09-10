@@ -1,0 +1,9 @@
+# Use this workspace to collaborate
+workspace:
+  id: 0b7e36c0-0f04-4fc5-810e-1f90584ff994
+
+localResources:
+  collections:
+    - ../postman_collection.json
+  specs:
+    - ../swagger.json

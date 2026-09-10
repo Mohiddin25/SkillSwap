@@ -1,0 +1,40 @@
+const express = require('express');
+const authRoutes = require('./authRoutes');
+const userRoutes = require('./userRoutes');
+const skillRoutes = require('./skillRoutes');
+const availabilityRoutes = require('./availabilityRoutes');
+const matchingRoutes = require('./matchingRoutes');
+const requestRoutes = require('./requestRoutes');
+const sessionRoutes = require('./sessionRoutes');
+const ratingRoutes = require('./ratingRoutes');
+const creditRoutes = require('./creditRoutes');
+const badgeRoutes = require('./badgeRoutes');
+const notificationRoutes = require('./notificationRoutes');
+const chatRoutes = require('./chatRoutes');
+const adminRoutes = require('./adminRoutes');
+const analyticsRoutes = require('./analyticsRoutes');
+const searchRoutes = require('./searchRoutes');
+const dashboardRoutes = require('./dashboardRoutes');
+const reportRoutes = require('./reportRoutes');
+
+const router = express.Router();
+
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/skills', skillRoutes);
+router.use('/availability', availabilityRoutes);
+router.use('/matches', matchingRoutes);
+router.use('/requests', requestRoutes);
+router.use('/sessions', sessionRoutes);
+router.use('/ratings', ratingRoutes);
+router.use('/credits', creditRoutes);
+router.use('/badges', badgeRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/chat', chatRoutes);
+router.use('/admin', adminRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/search', searchRoutes);
+router.use('/dashboard', dashboardRoutes);
+router.use('/reports', reportRoutes);
+
+module.exports = router;
