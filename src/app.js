@@ -12,10 +12,36 @@ const swaggerDocument = require('../swagger.json');
 const app = express();
 
 // Security & Parsing Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cookieParser());
+
+// Dynamic CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  'https://swap-skills-frontend.vercel.app'
+];
+
+if (env.CLIENT_URL) {
+  const cleanClientUrl = env.CLIENT_URL.replace(/\/$/, '');
+  if (!allowedOrigins.includes(cleanClientUrl)) {
+    allowedOrigins.push(cleanClientUrl);
+  }
+}
+
 app.use(cors({
-  origin: env.CLIENT_URL || '*',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(cleanOrigin) || cleanOrigin.includes('localhost') || cleanOrigin.includes('127.0.0.1') || cleanOrigin.endsWith('.vercel.app') || cleanOrigin.endsWith('.onrender.com')) {
+      return callback(null, origin);
+    }
+    return callback(null, origin);
+  },
   credentials: true
 }));
 
