@@ -94,7 +94,15 @@ const sendMessage = async (req, res, next) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.to(conversation._id.toString()).emit('message:receive', populatedMessage);
+      const convRoom = conversation._id.toString();
+      let emitter = io.to(convRoom);
+      if (Array.isArray(conversation.participants)) {
+        conversation.participants.forEach((p) => {
+          const pStr = p ? (p._id || p.id || p).toString() : null;
+          if (pStr) emitter = emitter.to(`user:${pStr}`);
+        });
+      }
+      emitter.emit('message:receive', populatedMessage);
     }
 
     return successResponse(res, 201, 'Message sent successfully', populatedMessage);
