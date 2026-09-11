@@ -92,6 +92,11 @@ const sendMessage = async (req, res, next) => {
 
     const populatedMessage = await Message.findById(message._id).populate('sender', 'name email profileImage');
 
+    const io = req.app.get('io');
+    if (io) {
+      io.to(conversation._id.toString()).emit('message:receive', populatedMessage);
+    }
+
     return successResponse(res, 201, 'Message sent successfully', populatedMessage);
   } catch (error) {
     next(error);

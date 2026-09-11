@@ -11,18 +11,29 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: env.CLIENT_URL || '*',
-    methods: ['GET', 'POST']
+    origin: (origin, callback) => callback(null, true),
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
+
+app.set('io', io);
 
 io.on('connection', (socket) => {
   if (env.NODE_ENV === 'development') {
     console.log(`[Socket.io] Client connected: ${socket.id}`);
   }
 
+  socket.on('join_user', (userId) => {
+    if (userId) {
+      socket.join(`user:${userId}`);
+    }
+  });
+
   socket.on('join_conversation', (conversationId) => {
-    socket.join(conversationId);
+    if (conversationId) {
+      socket.join(conversationId);
+    }
   });
 
   socket.on('message:send', async (data) => {
@@ -35,7 +46,10 @@ io.on('connection', (socket) => {
       });
       await Conversation.findByIdAndUpdate(conversationId, { lastMessage: message._id });
 
-      io.to(conversationId).emit('message:receive', message);
+      const populatedMessage = await Message.findById(message._id)
+        .populate('sender', 'name email profileImage');
+
+      io.to(conversationId).emit('message:receive', populatedMessage);
     } catch (err) {
       socket.emit('error', { message: err.message });
     }
