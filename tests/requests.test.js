@@ -48,7 +48,7 @@ describe('Swap Request System Endpoints', () => {
     expect(dupRes.statusCode).toBe(409);
   });
 
-  it('should allow receiver to accept swap request', async () => {
+  it('should allow receiver to accept swap request and create session for both users without duplication', async () => {
     const sendRes = await request(app)
       .post('/api/requests')
       .set('Authorization', `Bearer ${tokenA}`)
@@ -61,6 +61,37 @@ describe('Swap Request System Endpoints', () => {
       .set('Authorization', `Bearer ${tokenB}`);
 
     expect(acceptRes.statusCode).toBe(200);
-    expect(acceptRes.body.data.status).toBe('accepted');
+    expect(acceptRes.body.data.request.status).toBe('accepted');
+    expect(acceptRes.body.data.session).toBeDefined();
+
+    // Verify session appears in Upcoming Sessions for User A (sender)
+    const sessionsA = await request(app)
+      .get('/api/sessions/me')
+      .set('Authorization', `Bearer ${tokenA}`);
+
+    expect(sessionsA.statusCode).toBe(200);
+    expect(sessionsA.body.data.length).toBe(1);
+    expect(sessionsA.body.data[0].status).toBe('scheduled');
+
+    // Verify session appears in Upcoming Sessions for User B (receiver)
+    const sessionsB = await request(app)
+      .get('/api/sessions/me')
+      .set('Authorization', `Bearer ${tokenB}`);
+
+    expect(sessionsB.statusCode).toBe(200);
+    expect(sessionsB.body.data.length).toBe(1);
+    expect(sessionsB.body.data[0].status).toBe('scheduled');
+
+    // Duplicate protection: Accepting again should not duplicate sessions
+    await request(app)
+      .patch(`/api/requests/${requestId}/accept`)
+      .set('Authorization', `Bearer ${tokenB}`);
+
+    const sessionsDupCheck = await request(app)
+      .get('/api/sessions/me')
+      .set('Authorization', `Bearer ${tokenB}`);
+
+    expect(sessionsDupCheck.body.data.length).toBe(1);
   });
 });
+

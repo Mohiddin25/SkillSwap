@@ -2,10 +2,12 @@ const SwapRequest = require('../models/SwapRequest');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const Session = require('../models/Session');
+const Skill = require('../models/Skill');
 const { createNotification } = require('../services/notificationService');
 const { calculateUserMatch } = require('../services/matchingService');
 const Availability = require('../models/Availability');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
+
 
 /**
  * Send a swap request
@@ -174,7 +176,11 @@ const acceptRequest = async (req, res, next) => {
       .populate('skill', 'name category');
 
     if (!session) {
-      const skillId = request.skillsOffered?.[0] || request.skillsRequested?.[0];
+      let skillId = request.skillsOffered?.[0] || request.skillsRequested?.[0];
+      if (!skillId) {
+        const fallbackSkill = await Skill.findOne({ isActive: true });
+        if (fallbackSkill) skillId = fallbackSkill._id;
+      }
       const tomorrow = new Date(Date.now() + 86400000);
       const tomorrowEnd = new Date(Date.now() + 86400000 + 3600000);
 
@@ -190,10 +196,11 @@ const acceptRequest = async (req, res, next) => {
       });
 
       session = await Session.findById(createdSession._id)
-        .populate('teacher', 'name email department year campus profileImage')
-        .populate('learner', 'name email department year campus profileImage')
+        .populate('teacher', 'name email department year campus profileImage rating')
+        .populate('learner', 'name email department year campus profileImage rating')
         .populate('skill', 'name category');
     }
+
 
     // Create chat conversation between participants if doesn't exist
     let conversation = await Conversation.findOne({
