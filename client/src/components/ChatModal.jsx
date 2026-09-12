@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, MessageSquare } from 'lucide-react';
+import { X, Send, MessageSquare, Trash2, AlertTriangle } from 'lucide-react';
 import { chatService } from '../api/services';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -12,6 +12,7 @@ const ChatModal = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -34,6 +35,7 @@ const ChatModal = ({ isOpen, onClose }) => {
 
   const selectConversation = async (conv) => {
     setActiveConv(conv);
+    setShowDeleteConfirm(false);
     try {
       const res = await chatService.getMessages(conv._id);
       setMessages(res.data?.data || []);
@@ -54,7 +56,41 @@ const ChatModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleDeleteConversation = async () => {
+    if (!activeConv) return;
+    try {
+      await chatService.deleteConversation(activeConv._id);
+      showToast('Chat conversation deleted', 'success');
+      const updatedList = conversations.filter((c) => c._id !== activeConv._id);
+      setConversations(updatedList);
+      if (updatedList.length > 0) {
+        selectConversation(updatedList[0]);
+      } else {
+        setActiveConv(null);
+        setMessages([]);
+      }
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      showToast('Failed to delete conversation', 'error');
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!activeConv) return;
+    try {
+      await chatService.deleteMessage(activeConv._id, messageId);
+      setMessages((prev) => prev.filter((m) => m._id !== messageId));
+      showToast('Message deleted', 'success');
+    } catch (err) {
+      showToast('Failed to delete message', 'error');
+    }
+  };
+
   if (!isOpen) return null;
+
+  const currentPartner = activeConv
+    ? activeConv.participants.find((p) => (p._id || p) !== user._id) || activeConv.participants[0]
+    : null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -102,11 +138,29 @@ const ChatModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Messages Area */}
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#1e293b' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#1e293b', position: 'relative' }}>
             {activeConv ? (
               <>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-color)', fontWeight: 700 }}>
-                  Chat Thread
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-color)', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Chat with {currentPartner?.name || 'Peer'}</span>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    title="Delete Chat"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      color: '#f87171',
+                      borderRadius: '6px',
+                      padding: '5px 10px',
+                      fontSize: '0.78rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Trash2 size={14} /> Delete Chat
+                  </button>
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -118,15 +172,42 @@ const ChatModal = ({ isOpen, onClose }) => {
                         style={{
                           alignSelf: isMine ? 'flex-end' : 'flex-start',
                           maxWidth: '75%',
-                          padding: '10px 14px',
-                          borderRadius: '14px',
-                          background: isMine ? 'var(--primary-gradient)' : '#0f172a',
-                          color: '#fff',
-                          fontSize: '0.88rem',
-                          boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+                          position: 'relative'
                         }}
+                        className="group"
                       >
-                        {msg.text}
+                        <div
+                          style={{
+                            padding: '10px 14px',
+                            borderRadius: '14px',
+                            background: isMine ? 'var(--primary-gradient)' : '#0f172a',
+                            color: '#fff',
+                            fontSize: '0.88rem',
+                            boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                            display: 'flex',
+                            justify: 'space-between',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          <span>{msg.text}</span>
+                          {isMine && (
+                            <button
+                              onClick={() => handleDeleteMessage(msg._id)}
+                              title="Delete message"
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                cursor: 'pointer',
+                                padding: '2px',
+                                display: 'inline-flex'
+                              }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -150,6 +231,69 @@ const ChatModal = ({ isOpen, onClose }) => {
                 Select a conversation to start chatting
               </div>
             )}
+
+            {/* Confirmation Overlay Modal */}
+            {showDeleteConfirm && (
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(15, 23, 42, 0.92)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'center',
+                padding: '20px',
+                zIndex: 10
+              }}>
+                <div style={{
+                  background: '#1e293b',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  maxWidth: '360px',
+                  width: '100%',
+                  textAlign: 'center',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+                }}>
+                  <AlertTriangle size={36} color="#f87171" style={{ margin: '0 auto 12px auto' }} />
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '8px' }}>Delete Chat History?</h4>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
+                    This will delete all messages in this conversation. This action cannot be undone.
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid var(--border-color)',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteConversation}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        background: '#ef4444',
+                        border: 'none',
+                        color: '#fff',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      Yes, Delete Chat
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -158,3 +302,4 @@ const ChatModal = ({ isOpen, onClose }) => {
 };
 
 export default ChatModal;
+

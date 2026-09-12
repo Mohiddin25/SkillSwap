@@ -111,8 +111,103 @@ const sendMessage = async (req, res, next) => {
   }
 };
 
+/**
+ * Delete a conversation and all its messages
+ * DELETE /api/chat/conversations/:id
+ */
+const deleteConversation = async (req, res, next) => {
+  try {
+    const conversation = await Conversation.findOne({
+      _id: req.params.id,
+      participants: req.user._id
+    });
+
+    if (!conversation) {
+      return errorResponse(res, 404, 'Conversation not found or access denied');
+    }
+
+    await Message.deleteMany({ conversation: req.params.id });
+    await Conversation.deleteOne({ _id: req.params.id });
+
+    const io = req.app.get('io');
+    if (io) {
+      const convRoom = req.params.id.toString();
+      let emitter = io.to(convRoom);
+      if (Array.isArray(conversation.participants)) {
+        conversation.participants.forEach((p) => {
+          const pStr = p ? (p._id || p.id || p).toString() : null;
+          if (pStr) emitter = emitter.to(`user:${pStr}`);
+        });
+      }
+      emitter.emit('conversation:deleted', { conversationId: req.params.id });
+    }
+
+    return successResponse(res, 200, 'Conversation deleted successfully', { conversationId: req.params.id });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Delete a specific message in a conversation
+ * DELETE /api/chat/conversations/:id/messages/:messageId
+ */
+const deleteMessage = async (req, res, next) => {
+  try {
+    const conversation = await Conversation.findOne({
+      _id: req.params.id,
+      participants: req.user._id
+    });
+
+    if (!conversation) {
+      return errorResponse(res, 404, 'Conversation not found or access denied');
+    }
+
+    const message = await Message.findOne({
+      _id: req.params.messageId,
+      conversation: req.params.id
+    });
+
+    if (!message) {
+      return errorResponse(res, 404, 'Message not found');
+    }
+
+    if (message.sender.toString() !== req.user._id.toString()) {
+      return errorResponse(res, 403, 'You can only delete your own messages');
+    }
+
+    await Message.deleteOne({ _id: req.params.messageId });
+
+    if (conversation.lastMessage && conversation.lastMessage.toString() === req.params.messageId.toString()) {
+      const previousMessage = await Message.findOne({ conversation: req.params.id }).sort({ createdAt: -1 });
+      conversation.lastMessage = previousMessage ? previousMessage._id : null;
+      await conversation.save();
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      const convRoom = req.params.id.toString();
+      let emitter = io.to(convRoom);
+      if (Array.isArray(conversation.participants)) {
+        conversation.participants.forEach((p) => {
+          const pStr = p ? (p._id || p.id || p).toString() : null;
+          if (pStr) emitter = emitter.to(`user:${pStr}`);
+        });
+      }
+      emitter.emit('message:deleted', { conversationId: req.params.id, messageId: req.params.messageId });
+    }
+
+    return successResponse(res, 200, 'Message deleted successfully', { messageId: req.params.messageId });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getConversations,
   getMessages,
-  sendMessage
+  sendMessage,
+  deleteConversation,
+  deleteMessage
 };
+

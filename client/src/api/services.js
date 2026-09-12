@@ -79,5 +79,8 @@ export const searchService = {
 export const chatService = {
   getConversations: () => api.get('/chat/conversations'),
   getMessages: (conversationId) => api.get(`/chat/conversations/${conversationId}/messages`),
-  sendMessage: (conversationId, data) => api.post(`/chat/conversations/${conversationId}/messages`, data)
+  sendMessage: (conversationId, data) => api.post(`/chat/conversations/${conversationId}/messages`, data),
+  deleteConversation: (conversationId) => api.delete(`/chat/conversations/${conversationId}`),
+  deleteMessage: (conversationId, messageId) => api.delete(`/chat/conversations/${conversationId}/messages/${messageId}`)
 };
+
